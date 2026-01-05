@@ -272,6 +272,73 @@ Then add the subscriber to the `expo-module.config.json`:
 - If any feature launches the app or could benefit from deep linking, add an Expo Router integration. A good example is `expo-quick-actions` which has a `expo-quick-actions/router` import for automatic deep linking. Other good examples are Expo notifications (open settings, redirect notifications), widgets, siri shortcuts.
   - Ref: https://github.com/EvanBacon/expo-quick-actions
 
+## Date Parsing
+
+When accepting date strings from JavaScript, support multiple formats with fallback parsing. Create reusable formatters as private lazy properties on the module class:
+
+```swift
+private let dateFormatterWithFractionalSeconds: ISO8601DateFormatter = {
+  let formatter = ISO8601DateFormatter()
+  formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+  return formatter
+}()
+
+private let dateFormatterWithoutFractionalSeconds: ISO8601DateFormatter = {
+  let formatter = ISO8601DateFormatter()
+  formatter.formatOptions = [.withInternetDateTime]
+  return formatter
+}()
+
+private let dateFormatterDateOnly: DateFormatter = {
+  let formatter = DateFormatter()
+  formatter.dateFormat = "yyyy-MM-dd"
+  formatter.locale = Locale(identifier: "en_US_POSIX")
+  formatter.timeZone = TimeZone.current
+  return formatter
+}()
+
+/// Parses a date string supporting multiple formats:
+/// - ISO8601 with fractional seconds: 2024-01-15T10:30:00.000Z
+/// - ISO8601 without fractional seconds: 2024-01-15T10:30:00Z
+/// - Date only: 2024-01-15
+/// - Unix timestamp (ms): 1705312200000
+private func parseDate(_ dateString: String) -> Date? {
+  // Try ISO8601 with fractional seconds first
+  if let date = dateFormatterWithFractionalSeconds.date(from: dateString) {
+    return date
+  }
+
+  // Try ISO8601 without fractional seconds
+  if let date = dateFormatterWithoutFractionalSeconds.date(from: dateString) {
+    return date
+  }
+
+  // Try date-only format
+  if let date = dateFormatterDateOnly.date(from: dateString) {
+    return date
+  }
+
+  // Try Unix timestamp in milliseconds
+  if let timestamp = Double(dateString), timestamp > 1_000_000_000_000 {
+    return Date(timeIntervalSince1970: timestamp / 1000)
+  }
+
+  return nil
+}
+
+/// Formats a date to ISO8601 with fractional seconds
+private func formatDate(_ date: Date) -> String {
+  return dateFormatterWithFractionalSeconds.string(from: date)
+}
+```
+
+Key points:
+- **Fractional seconds first** - JavaScript's `new Date().toISOString()` includes fractional seconds, so try that format first
+- **Reuse formatters** - Creating `DateFormatter`/`ISO8601DateFormatter` instances is expensive; store them as lazy properties
+- **Use `en_US_POSIX` locale** - For date-only parsing, use POSIX locale to avoid locale-specific formatting issues
+- **Support Unix timestamps** - Check if the value is a large number (>1 trillion) to distinguish ms timestamps from other numeric strings
+- **Consistent output** - Always output dates with fractional seconds for consistency with JavaScript's ISO format
+
 ## Verification
 
 - Run `yarn expo run:ios --no-bundler` in an Expo app to headlessly compile the module and verify there are no compilation errors.

@@ -283,25 +283,6 @@ export function wrapNativeSample(native: unknown): HealthKitSample {
     }
   } catch {}
 
-  // Fallback: Use toJSON() to get type information when properties aren't accessible
-  // This happens when ExpoModulesCore returns polymorphic SharedObjects
-  try {
-    if (typeof sample.toJSON === 'function') {
-      const json = sample.toJSON() as Record<string, unknown>;
-      const typename = json.__typename as SampleTypename | undefined;
-
-      if (typename === 'QuantitySample' || json.quantityType) {
-        return new QuantitySample(sample as NativeQuantitySample);
-      }
-      if (typename === 'CategorySample' || json.categoryType) {
-        return new CategorySample(sample as NativeCategorySample);
-      }
-      if (typename === 'WorkoutSample' || json.workoutActivityType) {
-        return new WorkoutSample(sample as NativeWorkoutSample);
-      }
-    }
-  } catch {}
-
   throw new Error("Unknown sample type");
 }
 

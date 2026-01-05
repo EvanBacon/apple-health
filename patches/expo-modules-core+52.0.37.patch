@@ -1,0 +1,55 @@
+diff --git a/ios/Core/DynamicTypes/DynamicSharedObjectType.swift b/ios/Core/DynamicTypes/DynamicSharedObjectType.swift
+--- a/ios/Core/DynamicTypes/DynamicSharedObjectType.swift
++++ b/ios/Core/DynamicTypes/DynamicSharedObjectType.swift
+@@ -61,14 +61,17 @@ internal struct DynamicSharedObjectType: AnyDynamicType {
+   func convertResult<ResultType>(_ result: ResultType, appContext: AppContext) throws -> Any {
+     // Postpone object creation to execute on the JS thread.
+     JavaScriptSharedObjectBinding.init {
+       // If the result is a native shared object, create its JS representation and add the pair to the registry of shared objects.
+       if let sharedObject = result as? SharedObject {
+         // If the JS object already exists, just return it.
+         if let jsObject = sharedObject.getJavaScriptObject() {
+           return jsObject
+         }
+-        guard let jsObject = try? appContext.newObject(nativeClassId: typeIdentifier) else {
++
++        // Use runtime type resolution: try the actual type first, then walk up the inheritance chain
++        let runtimeClassId = Self.findBestClassId(for: sharedObject, in: appContext)
++
++        guard let jsObject = try? appContext.newObject(nativeClassId: runtimeClassId) else {
+           // Throwing is not possible here due to swift-objC interop.
+           log.warn("Unable to create a JS object for \(description)")
+           return JavaScriptObject()
+@@ -82,6 +85,27 @@ internal struct DynamicSharedObjectType: AnyDynamicType {
+     }
+   }
+
++  /**
++   Finds the best matching class ID for a SharedObject by checking its runtime type
++   and walking up the inheritance chain until a registered class is found.
++   This enables polymorphic return types where a function returns a base class
++   but the actual objects are subclass instances with their own Class definitions.
++   */
++  private static func findBestClassId(for sharedObject: SharedObject, in appContext: AppContext) -> ObjectIdentifier {
++    var currentType: AnyClass? = type(of: sharedObject)
++
++    // Walk up the class hierarchy to find a registered class definition
++    while let classType = currentType {
++      let classId = ObjectIdentifier(classType)
++
++      // Check if this class has a registered JavaScript class
++      if appContext.classRegistry.getJavaScriptClass(nativeClassId: classId) != nil {
++        return classId
++      }
++
++      // Move to the superclass
++      currentType = classType.superclass()
++    }
++
++    // Fallback to the declared type if no specific class was found
++    return ObjectIdentifier(type(of: sharedObject))
++  }
++
+   var description: String {
+     return "SharedObject<\(innerType)>"
+   }

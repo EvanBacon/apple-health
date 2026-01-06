@@ -246,13 +246,23 @@ public final class HealthKitSampleBuilder: SharedObject {
       throw InvalidDateRangeException()
     }
 
-    let sample = HKCategorySample(
-      type: categoryType,
-      value: catValue,
-      start: start,
-      end: end,
-      metadata: metadata
-    )
+    var sample: HKCategorySample?
+
+    if let error = ObjCExceptionHandler.executeAndCatchException({
+      sample = HKCategorySample(
+        type: categoryType,
+        value: catValue,
+        start: start,
+        end: end,
+        metadata: self.metadata
+      )
+    }) {
+      throw HealthKitValidationException(error.localizedDescription)
+    }
+
+    guard let sample = sample else {
+      throw HealthKitValidationException("Failed to create category sample")
+    }
 
     try await store.save(sample)
 
@@ -275,13 +285,23 @@ public final class HealthKitSampleBuilder: SharedObject {
       throw InvalidDateRangeException()
     }
 
-    let sample = HKCategorySample(
-      type: categoryType,
-      value: catValue,
-      start: start,
-      end: end,
-      metadata: metadata
-    )
+    var sample: HKCategorySample?
+
+    if let error = ObjCExceptionHandler.executeAndCatchException({
+      sample = HKCategorySample(
+        type: categoryType,
+        value: catValue,
+        start: start,
+        end: end,
+        metadata: self.metadata
+      )
+    }) {
+      throw HealthKitValidationException(error.localizedDescription)
+    }
+
+    guard let sample = sample else {
+      throw HealthKitValidationException("Failed to create category sample")
+    }
 
     try await store.save(sample)
 
@@ -387,5 +407,11 @@ internal final class InvalidDateFormatException: GenericException<String> {
 internal final class InvalidDateRangeException: Exception {
   override var reason: String {
     "Start date must be less than or equal to end date"
+  }
+}
+
+internal final class HealthKitValidationException: GenericException<String> {
+  override var reason: String {
+    "HealthKit validation failed: \(param)"
   }
 }

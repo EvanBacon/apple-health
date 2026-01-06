@@ -19,7 +19,7 @@ interface PluginMessage {
   payload: Record<string, unknown>;
 }
 
-export function useHealthKitDevTools() {
+function useHealthKitDevToolsDev() {
   const client = useDevToolsPluginClient("healthkit");
 
   useEffect(() => {
@@ -33,7 +33,11 @@ export function useHealthKitDevTools() {
       };
 
       const sendError = (error: Error) => {
-        client.sendMessage("error", { id, type: "error", error: error.message });
+        client.sendMessage("error", {
+          id,
+          type: "error",
+          error: error.message,
+        });
       };
 
       (async () => {
@@ -46,9 +50,10 @@ export function useHealthKitDevTools() {
                 .type(payload.type as QuantityTypeIdentifier, "quantity")
                 .dateRange(options?.startDate, options?.endDate);
               if (options?.limit) query.limit(options.limit);
-              if (options?.ascending !== undefined) query.ascending(options.ascending);
+              if (options?.ascending !== undefined)
+                query.ascending(options.ascending);
               const samples = await query.execute();
-              sendResult(samples.map(s => s.toJSON()));
+              sendResult(samples.map((s) => s.toJSON()));
               break;
             }
 
@@ -58,9 +63,10 @@ export function useHealthKitDevTools() {
                 .type(payload.type as CategoryTypeIdentifier, "category")
                 .dateRange(options?.startDate, options?.endDate);
               if (options?.limit) query.limit(options.limit);
-              if (options?.ascending !== undefined) query.ascending(options.ascending);
+              if (options?.ascending !== undefined)
+                query.ascending(options.ascending);
               const samples = await query.execute();
-              sendResult(samples.map(s => s.toJSON()));
+              sendResult(samples.map((s) => s.toJSON()));
               break;
             }
 
@@ -70,9 +76,10 @@ export function useHealthKitDevTools() {
                 .type("workout", "workout")
                 .dateRange(options?.startDate, options?.endDate);
               if (options?.limit) query.limit(options.limit);
-              if (options?.ascending !== undefined) query.ascending(options.ascending);
+              if (options?.ascending !== undefined)
+                query.ascending(options.ascending);
               const samples = await query.execute();
-              sendResult(samples.map(s => s.toJSON()));
+              sendResult(samples.map((s) => s.toJSON()));
               break;
             }
 
@@ -116,7 +123,8 @@ export function useHealthKitDevTools() {
                 .unit(payload.unit as string)
                 .startDate(payload.startDate as string)
                 .endDate(payload.endDate as string);
-              if (payload.metadata) builder.metadata(payload.metadata as Record<string, unknown>);
+              if (payload.metadata)
+                builder.metadata(payload.metadata as Record<string, unknown>);
               const sample = await builder.save();
               sendResult({ success: true, sample });
               break;
@@ -128,7 +136,8 @@ export function useHealthKitDevTools() {
                 .categoryValue(payload.value as number)
                 .startDate(payload.startDate as string)
                 .endDate(payload.endDate as string);
-              if (payload.metadata) builder.metadata(payload.metadata as Record<string, unknown>);
+              if (payload.metadata)
+                builder.metadata(payload.metadata as Record<string, unknown>);
               const sample = await builder.save();
               sendResult({ success: true, sample });
               break;
@@ -139,9 +148,12 @@ export function useHealthKitDevTools() {
                 .workoutType(payload.activityType as WorkoutActivityType)
                 .startDate(payload.startDate as string)
                 .endDate(payload.endDate as string);
-              if (payload.energy) builder.totalEnergyBurned(payload.energy as number);
-              if (payload.distance) builder.totalDistance(payload.distance as number);
-              if (payload.metadata) builder.metadata(payload.metadata as Record<string, unknown>);
+              if (payload.energy)
+                builder.totalEnergyBurned(payload.energy as number);
+              if (payload.distance)
+                builder.totalDistance(payload.distance as number);
+              if (payload.metadata)
+                builder.metadata(payload.metadata as Record<string, unknown>);
               const sample = await builder.save();
               sendResult({ success: true, sample });
               break;
@@ -232,12 +244,19 @@ export function useHealthKitDevTools() {
     };
 
     // Listen for messages from the CLI
-    const subscription = client.addMessageListener("message", (msg: unknown) => {
-      handleMessage(msg as PluginMessage);
-    });
+    const subscription = client.addMessageListener(
+      "message",
+      (msg: unknown) => {
+        handleMessage(msg as PluginMessage);
+      }
+    );
 
     return () => {
       subscription?.remove?.();
     };
   }, [client]);
 }
+
+export const useHealthKitDevTools = __DEV__
+  ? useHealthKitDevToolsDev
+  : () => {};

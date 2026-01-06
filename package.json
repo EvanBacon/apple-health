@@ -1,6 +1,6 @@
 {
   "name": "apple-health",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "description": "Apple HealthKit bindings for Expo",
   "main": "source/index.ts",
   "types": "build/index.d.ts",

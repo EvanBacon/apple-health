@@ -2,7 +2,7 @@
   "name": "apple-health",
   "version": "0.0.1",
   "description": "Apple HealthKit bindings for Expo",
-  "main": "source/index.ts",
+  "main": "src/index.ts",
   "types": "build/index.d.ts",
   "bin": {
     "apple-health": "cli/index.ts"

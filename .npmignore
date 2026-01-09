@@ -7,8 +7,11 @@
 __mocks__
 __tests__
 
+/.eslintrc.js
 /babel.config.js
+/bun.lock
 /android/src/androidTest/
 /android/src/test/
 /android/build/
+/docs/
 /example/

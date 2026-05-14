@@ -12,6 +12,8 @@ export interface HealthKitPluginProps {
   isClinicalDataEnabled?: boolean;
   /** Enable background delivery for health data updates */
   backgroundDelivery?: boolean;
+  /** Whether HealthKit is required for the app to function. Defaults to `true`. */
+  healthKitRequired?: boolean;
 }
 
 const withHealthKitPlugin: ConfigPlugin<HealthKitPluginProps | void> = (config, props) => {

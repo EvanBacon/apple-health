@@ -6,7 +6,7 @@ const DEFAULT_UPDATE_PERMISSION = 'Allow $(PRODUCT_NAME) to save health data.';
 
 export const withHealthKitInfoPlist: ConfigPlugin<HealthKitPluginProps> = (
   config,
-  { healthSharePermission, healthUpdatePermission }
+  { healthSharePermission, healthUpdatePermission, healthKitRequired = true }
 ) => {
   return withInfoPlist(config, (config) => {
     config.modResults['NSHealthShareUsageDescription'] =
@@ -14,11 +14,13 @@ export const withHealthKitInfoPlist: ConfigPlugin<HealthKitPluginProps> = (
     config.modResults['NSHealthUpdateUsageDescription'] =
       healthUpdatePermission ?? DEFAULT_UPDATE_PERMISSION;
 
-    const capabilities = (config.modResults['UIRequiredDeviceCapabilities'] as string[]) ?? [];
-    if (!capabilities.includes('healthkit')) {
-      capabilities.push('healthkit');
+    if (healthKitRequired) {
+      const capabilities = (config.modResults['UIRequiredDeviceCapabilities'] as string[]) ?? [];
+
+      if (!capabilities.includes('healthkit')) capabilities.push('healthkit');
+
+      config.modResults['UIRequiredDeviceCapabilities'] = capabilities;
     }
-    config.modResults['UIRequiredDeviceCapabilities'] = capabilities;
 
     return config;
   });

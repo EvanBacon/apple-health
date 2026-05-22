@@ -98,6 +98,22 @@ Realistic sleep pattern example:
 | 2     | Moderate    |
 | 3     | Severe      |
 
+### Menstrual Flow Values
+
+| Value | Meaning     |
+| ----- | ----------- |
+| 1     | Unspecified |
+| 2     | Light       |
+| 3     | Medium      |
+| 4     | Heavy       |
+| 5     | None        |
+
+**Required metadata**: `menstrualFlow` requires `HKMenstrualCycleStart` (boolean):
+
+```json
+{"kind":"category","type":"menstrualFlow","value":2,"start":"today","duration":"1d","metadata":{"HKMenstrualCycleStart":true}}
+```
+
 ### Date Formats
 
 | Format           | Example                | Description           |
@@ -246,6 +262,7 @@ Common category types:
 - Sleep: `sleepAnalysis`
 - Symptoms: `headache`, `fatigue`, `nausea`, `dizziness`
 - Mindfulness: `mindfulSession`
+- Reproductive: `menstrualFlow`* (requires `HKMenstrualCycleStart` metadata)
 
 Workout types: `running`, `walking`, `cycling`, `swimming`, `yoga`, `hiking`, `highIntensityIntervalTraining`, `traditionalStrengthTraining`, and 70+ more.
 

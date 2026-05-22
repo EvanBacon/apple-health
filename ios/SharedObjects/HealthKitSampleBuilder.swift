@@ -8,8 +8,6 @@ public final class HealthKitSampleBuilder: SharedObject {
   private var value: Double?
   private var unit: String?
   private var categoryValue: Int?
-  private var startDate: Date?
-  private var endDate: Date?
   private var metadata: [String: Any]?
 
   // Workout-specific
@@ -35,7 +33,7 @@ public final class HealthKitSampleBuilder: SharedObject {
     return formatter
   }()
 
-  private func parseDate(_ dateString: String) -> Date? {
+  private func parseDate(_ dateString: String) throws -> Date {
     if let date = Self.dateFormatter.date(from: dateString) {
       return date
     }
@@ -45,7 +43,7 @@ public final class HealthKitSampleBuilder: SharedObject {
     if let timestamp = Double(dateString), timestamp > 1_000_000_000_000 {
       return Date(timeIntervalSince1970: timestamp / 1000)
     }
-    return nil
+    throw InvalidDateFormatException(dateString)
   }
 
   // MARK: - Configuration Methods
@@ -77,12 +75,29 @@ public final class HealthKitSampleBuilder: SharedObject {
     self.unit = unit
   }
 
+  private var startDateString: String?
+  private var endDateString: String?
+
   func setStartDate(_ dateString: String) {
-    self.startDate = parseDate(dateString)
+    self.startDateString = dateString
   }
 
   func setEndDate(_ dateString: String) {
-    self.endDate = parseDate(dateString)
+    self.endDateString = dateString
+  }
+
+  private func resolveStartDate() throws -> Date {
+    guard let dateString = startDateString else {
+      return Date()
+    }
+    return try parseDate(dateString)
+  }
+
+  private func resolveEndDate(fallback: Date) throws -> Date {
+    guard let dateString = endDateString else {
+      return fallback
+    }
+    return try parseDate(dateString)
   }
 
   func setMetadata(_ metadata: [String: Any]?) {
@@ -105,8 +120,8 @@ public final class HealthKitSampleBuilder: SharedObject {
     value = nil
     unit = nil
     categoryValue = nil
-    startDate = nil
-    endDate = nil
+    startDateString = nil
+    endDateString = nil
     metadata = nil
     workoutActivityType = nil
     totalEnergyBurned = nil
@@ -160,8 +175,12 @@ public final class HealthKitSampleBuilder: SharedObject {
       throw InvalidUnitException(unit ?? "nil")
     }
 
-    let start = startDate ?? Date()
-    let end = endDate ?? start
+    let start = try resolveStartDate()
+    let end = try resolveEndDate(fallback: start)
+
+    guard start <= end else {
+      throw InvalidDateRangeException()
+    }
 
     let quantity = HKQuantity(unit: hkUnit, doubleValue: value)
     let sample = HKQuantitySample(
@@ -190,8 +209,12 @@ public final class HealthKitSampleBuilder: SharedObject {
       throw InvalidUnitException(unit ?? "nil")
     }
 
-    let start = startDate ?? Date()
-    let end = endDate ?? start
+    let start = try resolveStartDate()
+    let end = try resolveEndDate(fallback: start)
+
+    guard start <= end else {
+      throw InvalidDateRangeException()
+    }
 
     let quantity = HKQuantity(unit: hkUnit, doubleValue: value)
     let sample = HKQuantitySample(
@@ -216,16 +239,30 @@ public final class HealthKitSampleBuilder: SharedObject {
       throw MissingValueException()
     }
 
-    let start = startDate ?? Date()
-    let end = endDate ?? start
+    let start = try resolveStartDate()
+    let end = try resolveEndDate(fallback: start)
 
-    let sample = HKCategorySample(
-      type: categoryType,
-      value: catValue,
-      start: start,
-      end: end,
-      metadata: metadata
-    )
+    guard start <= end else {
+      throw InvalidDateRangeException()
+    }
+
+    var sample: HKCategorySample?
+
+    if let error = ObjCExceptionHandler.executeAndCatchException({
+      sample = HKCategorySample(
+        type: categoryType,
+        value: catValue,
+        start: start,
+        end: end,
+        metadata: self.metadata
+      )
+    }) {
+      throw HealthKitValidationException(error.localizedDescription)
+    }
+
+    guard let sample = sample else {
+      throw HealthKitValidationException("Failed to create category sample")
+    }
 
     try await store.save(sample)
 
@@ -241,16 +278,30 @@ public final class HealthKitSampleBuilder: SharedObject {
       throw MissingValueException()
     }
 
-    let start = startDate ?? Date()
-    let end = endDate ?? start
+    let start = try resolveStartDate()
+    let end = try resolveEndDate(fallback: start)
 
-    let sample = HKCategorySample(
-      type: categoryType,
-      value: catValue,
-      start: start,
-      end: end,
-      metadata: metadata
-    )
+    guard start <= end else {
+      throw InvalidDateRangeException()
+    }
+
+    var sample: HKCategorySample?
+
+    if let error = ObjCExceptionHandler.executeAndCatchException({
+      sample = HKCategorySample(
+        type: categoryType,
+        value: catValue,
+        start: start,
+        end: end,
+        metadata: self.metadata
+      )
+    }) {
+      throw HealthKitValidationException(error.localizedDescription)
+    }
+
+    guard let sample = sample else {
+      throw HealthKitValidationException("Failed to create category sample")
+    }
 
     try await store.save(sample)
 
@@ -262,8 +313,12 @@ public final class HealthKitSampleBuilder: SharedObject {
       throw InvalidTypeIdentifierException("workout")
     }
 
-    let start = startDate ?? Date()
-    let end = endDate ?? start
+    let start = try resolveStartDate()
+    let end = try resolveEndDate(fallback: start)
+
+    guard start <= end else {
+      throw InvalidDateRangeException()
+    }
 
     var energyQuantity: HKQuantity? = nil
     if let energy = totalEnergyBurned {
@@ -295,8 +350,12 @@ public final class HealthKitSampleBuilder: SharedObject {
       throw InvalidTypeIdentifierException("workout")
     }
 
-    let start = startDate ?? Date()
-    let end = endDate ?? start
+    let start = try resolveStartDate()
+    let end = try resolveEndDate(fallback: start)
+
+    guard start <= end else {
+      throw InvalidDateRangeException()
+    }
 
     var energyQuantity: HKQuantity? = nil
     if let energy = totalEnergyBurned {
@@ -336,5 +395,23 @@ public final class HealthKitSampleBuilder: SharedObject {
 internal final class MissingValueException: Exception {
   override var reason: String {
     "Sample value is required but was not set"
+  }
+}
+
+internal final class InvalidDateFormatException: GenericException<String> {
+  override var reason: String {
+    "Invalid date format: '\(param)'. Expected ISO8601 format (e.g., '2024-01-05T12:30:00.000Z') or millisecond timestamp."
+  }
+}
+
+internal final class InvalidDateRangeException: Exception {
+  override var reason: String {
+    "Start date must be less than or equal to end date"
+  }
+}
+
+internal final class HealthKitValidationException: GenericException<String> {
+  override var reason: String {
+    "HealthKit validation failed: \(param)"
   }
 }

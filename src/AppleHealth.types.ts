@@ -115,13 +115,20 @@ export type QuantityTypeIdentifier =
 // Category Type Identifiers (40+ types)
 // ─────────────────────────────────────────────────────────────────────────────
 
+/**
+ * HealthKit category type identifiers.
+ *
+ * **Required Metadata:**
+ * - `menstrualFlow` requires `{ HKMenstrualCycleStart: boolean }` metadata
+ *   indicating whether the sample starts a new menstrual cycle.
+ */
 export type CategoryTypeIdentifier =
   // Sleep
   | 'sleepAnalysis'
   // Activity
   | 'appleStandHour'
   | 'lowCardioFitnessEvent'
-  // Reproductive Health
+  // Reproductive Health (menstrualFlow requires HKMenstrualCycleStart metadata)
   | 'menstrualFlow'
   | 'intermenstrualBleeding'
   | 'infrequentMenstrualCycles'

@@ -532,13 +532,16 @@ await AppleHealth.deleteSamples(
 
 ### Category Types
 
-| Category    | Types                                                                      |
-| ----------- | -------------------------------------------------------------------------- |
-| Sleep       | `sleepAnalysis`                                                            |
-| Activity    | `appleStandHour`, `lowCardioFitnessEvent`                                  |
-| Heart       | `highHeartRateEvent`, `lowHeartRateEvent`, `irregularHeartRhythmEvent`     |
-| Symptoms    | `headache`, `fatigue`, `fever`, `nausea`, `dizziness`, `shortnessOfBreath` |
-| Mindfulness | `mindfulSession`                                                           |
+| Category            | Types                                                                        |
+| ------------------- | ---------------------------------------------------------------------------- |
+| Sleep               | `sleepAnalysis`                                                              |
+| Activity            | `appleStandHour`, `lowCardioFitnessEvent`                                    |
+| Heart               | `highHeartRateEvent`, `lowHeartRateEvent`, `irregularHeartRhythmEvent`       |
+| Symptoms            | `headache`, `fatigue`, `fever`, `nausea`, `dizziness`, `shortnessOfBreath`   |
+| Mindfulness         | `mindfulSession`                                                             |
+| Reproductive Health | `menstrualFlow`\*, `cervicalMucusQuality`, `ovulationTestResult`, `sexualActivity` |
+
+\* `menstrualFlow` requires the `HKMenstrualCycleStart` metadata key (boolean). See [Required Metadata](#required-metadata).
 
 ### Sleep Values
 
@@ -558,6 +561,26 @@ await AppleHealth.deleteSamples(
 | 1     | Mild        |
 | 2     | Moderate    |
 | 3     | Severe      |
+
+### Required Metadata
+
+Some category types require specific metadata keys to be set. If metadata is missing, HealthKit will reject the sample with a validation error.
+
+| Type           | Required Metadata Key   | Type    | Description                                        |
+| -------------- | ----------------------- | ------- | -------------------------------------------------- |
+| `menstrualFlow` | `HKMenstrualCycleStart` | boolean | `true` if this sample starts a new menstrual cycle |
+
+**Example:**
+
+```tsx
+await new HealthKitSampleBuilder()
+  .categoryType("menstrualFlow")
+  .categoryValue(2) // light flow
+  .startDate(startOfDay)
+  .endDate(endOfDay)
+  .metadata({ HKMenstrualCycleStart: true }) // Required!
+  .save();
+```
 
 ## TypeScript Types
 
